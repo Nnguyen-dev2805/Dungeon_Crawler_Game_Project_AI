@@ -195,7 +195,7 @@ while run:
 
     # cập nhật quái vật
     for enemy in enemy_list:
-        enemy.ai(screen_scroll)
+        enemy.ai(player,world.obstacle_tiles,screen_scroll)
         enemy.update()
 
     # cập nhật nhân vật
@@ -206,7 +206,7 @@ while run:
     if arrow:
         arrow_group.add(arrow)
     for arrow in arrow_group:
-        damage,damage_pos = arrow.update(screen_scroll,enemy_list)
+        damage,damage_pos = arrow.update(screen_scroll,world.obstacle_tiles,enemy_list)
         if damage:
             damage_text = DamageText(damage_pos.centerx,damage_pos.centery,str(damage),constants.RED)
             damage_text_group.add(damage_text)

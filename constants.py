@@ -9,12 +9,15 @@ ITEM_SCALE = 3 # tỉ lệ cho item
 POTION_SCALE = 2 # tỉ lệ cho bình máu
 SPEED = 5
 ARROW_SPEED = 10 # tốc độ của mũi tên
+ENEMY_SPEED = 4
 OFFSET = 12 # điều chỉnh khoảng cách giữa nhân vật và vũ khí
 TILE_SIZE = 16 * SCALE
 TILE_TYPES = 18 # số loại tile
 ROWS = 150
 COLS = 150
 SCROLL_THRESH = 200
+RANGE = 50
+ATTACK_RANGE = 60
 
 
 WHITE = (255, 255, 255)

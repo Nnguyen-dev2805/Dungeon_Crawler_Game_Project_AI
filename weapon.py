@@ -53,15 +53,20 @@ class Arrow(pygame.sprite.Sprite):
         self.dx = math.cos(math.radians(angle)) * constants.ARROW_SPEED
         self.dy = -(math.sin(math.radians(angle)) * constants.ARROW_SPEED)
     
-    def update(self,screen_scroll,enemy_list):
+    def update(self,screen_scroll,obstacle_tiles,enemy_list):
         damage = 0
         damage_pos = None
 
         # định vị lại tốc độ 
         self.rect.x += screen_scroll[0] + self.dx
         self.rect.y += screen_scroll[1] + self.dy
+        
+        # kiểm tra thử có chạm với tường không
+        for obstacle in obstacle_tiles:
+            if obstacle[1].colliderect(self.rect):
+                self.kill()
 
-        # kiểm tra xem cung ra khỏi m   àn hình hay chưa
+        # kiểm tra xem cung ra khỏi màn hình hay chưa
         if self.rect.right < 0 or self.rect.left > constants.SCREEN_WIDTH or self.rect.bottom < 0 or self.rect.top > constants.SCREEN_HEIGHT:
             self.kill() # hàm trong Sprite để xóa đối tượng khỏi Group
         # kiểm tra va chạm với quái vật
@@ -70,6 +75,7 @@ class Arrow(pygame.sprite.Sprite):
                 damage = 10 + random.randint(-5,5)
                 damage_pos = enemy.rect
                 enemy.health -= damage
+                enemy.hit = True
                 self.kill()
                 break   
         return damage,damage_pos
