@@ -1,10 +1,12 @@
 import pygame
 import constants
+import weapon
 import math
+from collections import deque
 
 
 class Character:
-    def __init__(self, x, y, health, mob_animations, char_type,boss,size):
+    def __init__(self, x, y, health, mob_animations, char_type, boss, size):
         self.char_type = char_type
         self.boss = boss
         self.score = 0
@@ -18,14 +20,19 @@ class Character:
         self.alive = True
         self.hit = False
         self.last_hit = pygame.time.get_ticks()
+        self.last_attack = pygame.time.get_ticks()
         self.stunned = False
 
         self.image = self.animation_list[self.action][self.frame_index]
-        self.rect = pygame.Rect(0, 0, constants.TILE_SIZE* size, constants.TILE_SIZE * size)
+        self.rect = pygame.Rect(
+            0, 0, constants.TILE_SIZE * size, constants.TILE_SIZE * size
+        )
         self.rect.center = (x, y)
 
-    def move(self, dx, dy,obstacle_tiles):
-        screen_scroll = [0,0]
+    def move(self, dx, dy, obstacle_tiles, exit_tile=None):
+        screen_scroll = [0, 0]
+
+        level_complete = False
 
         self.running = False
         # xác định hướng di chuyển
@@ -42,14 +49,14 @@ class Character:
         if dx != 0 and dy != 0:
             dx = dx * (math.sqrt(2) / 2)
             dy = dy * (math.sqrt(2) / 2)
-        
-        # kiểm tra xem có đụng độ với tường không   
+
+        # kiểm tra xem có đụng độ với tường không
         self.rect.x += dx
         for obstacle in obstacle_tiles:
             if obstacle[1].colliderect(self.rect):
                 # kiểm tra xem đang đi về hướng nào
                 if dx > 0:
-                    self.rect.right = obstacle[1].left # đẩy lại về mép tường
+                    self.rect.right = obstacle[1].left  # đẩy lại về mép tường
                 if dx < 0:
                     self.rect.left = obstacle[1].right
         # kiểm tra lên xuống
@@ -62,57 +69,149 @@ class Character:
                     self.rect.top = obstacle[1].bottom
 
         # màn hình chỉ di chuyển với người chơi
-        if self.char_type == 0: 
+        if self.char_type == 0:
+            # kiểm tra xem có chạm vào cửa exit không
+            if exit_tile[1].colliderect(self.rect):
+                # kiểm tra xem người chơi có thực sự ở tâm ô exit chưa
+                exit_dist = math.sqrt(
+                    (
+                        (self.rect.centerx - exit_tile[1].centerx) ** 2
+                        + (self.rect.centery - exit_tile[1].centery) ** 2
+                    )
+                )
+                if exit_dist < 20:
+                    level_complete = True
             # di chuyển sang trái hoặc phải
             if self.rect.right > (constants.SCREEN_WIDTH - constants.SCROLL_THRESH):
-                screen_scroll[0] = (constants.SCREEN_WIDTH - constants.SCROLL_THRESH) - self.rect.right
-                self.rect.right = (constants.SCREEN_WIDTH - constants.SCROLL_THRESH)
+                screen_scroll[0] = (
+                    constants.SCREEN_WIDTH - constants.SCROLL_THRESH
+                ) - self.rect.right
+                self.rect.right = constants.SCREEN_WIDTH - constants.SCROLL_THRESH
             if self.rect.left < constants.SCROLL_THRESH:
                 screen_scroll[0] = constants.SCROLL_THRESH - self.rect.left
                 self.rect.left = constants.SCROLL_THRESH
             # di chuyển lên trên hoặc xuống
             if self.rect.bottom > (constants.SCREEN_HEIGHT - constants.SCROLL_THRESH):
-                screen_scroll[1] = (constants.SCREEN_HEIGHT - constants.SCROLL_THRESH) - self.rect.bottom
-                self.rect.bottom = (constants.SCREEN_HEIGHT - constants.SCROLL_THRESH)
+                screen_scroll[1] = (
+                    constants.SCREEN_HEIGHT - constants.SCROLL_THRESH
+                ) - self.rect.bottom
+                self.rect.bottom = constants.SCREEN_HEIGHT - constants.SCROLL_THRESH
             if self.rect.top < constants.SCROLL_THRESH:
                 screen_scroll[1] = constants.SCROLL_THRESH - self.rect.top
                 self.rect.top = constants.SCROLL_THRESH
 
-        return screen_scroll
+        return screen_scroll, level_complete
+
+    def bfs(self, start, goal, obstacle_tiles):
+        # print(f"[BFS] Bot ở {start} đang tìm đường đến {goal}")
+        obstacles = set(
+            (obstacle[1].x // constants.TILE_SIZE, obstacle[1].y // constants.TILE_SIZE)
+            for obstacle in obstacle_tiles
+        )
+
+        queue = deque([start])
+        visited = set()
+        visited.add(start)
+        parent = {start: None}
+
+        directions = [(0, 1), (1, 0), (0, -1), (-1, 0)]
+
+        while queue:
+            current = queue.popleft()
+            if current == goal:
+                break
+            for direction in directions:
+                neighbor = (current[0] + direction[0], current[1] + direction[1])
+                if (
+                    neighbor not in visited
+                    and neighbor not in obstacles
+                    and neighbor[0] >= 0
+                    and neighbor[1] >= 0
+                ):
+                    queue.append(neighbor)
+                    visited.add(neighbor)
+                    parent[neighbor] = current
+        # Kiểm tra nếu goal không tồn tại trong parent
+        # tưc nhân vật bị bao vây bởi tường
+        if goal not in parent:
+            return 0, 0  # Không có đường đi
+    
+        # truy vết đường đi từ goal về start
+        path = []
+        current = goal
+        while current is not None:
+            path.append(current)
+            current = parent[current]
+        path.reverse()
+        # nếu có đường đi, trả về bước đầu tiên
+        if len(path) > 1:
+            next_step = path[1]
+            dx = next_step[0] - start[0]
+            dy = next_step[1] - start[1]
+            return dx, dy
+        return 0, 0  # Không có đường đi
 
     # dùng cho di chuyển quái vật
-    def ai(self,player,obstacle_tiles,screen_scroll):
+    def ai(self, player, obstacle_tiles, screen_scroll, fireball_image):
+        """
+        AI của kẻ thù, sử dụng BFS để tìm đường.
+        :param player: Đối tượng người chơi.
+        :param obstacle_tiles: Danh sách các chướng ngại vật.
+        :param screen_scroll: Dịch chuyển màn hình.
+        :param fireball_image: Hình ảnh quả cầu lửa.
+        """
         clipped_line = ()
-        
+
         stun_cooldown = 100
 
-        ai_dx = 0
-        ai_dy = 0
+        # ai_dx = 0
+        # ai_dy = 0
+
+        fireball = None
 
         self.rect.x += screen_scroll[0]
         self.rect.y += screen_scroll[1]
 
-        line_of_sight =((self.rect.centerx,self.rect.centery),(player.rect.centerx,player.rect.centery))
+        # Vị trí hiện tại của enemy và player
+        enemy_pos = (self.rect.centerx // constants.TILE_SIZE, self.rect.centery // constants.TILE_SIZE)
+        player_pos = (player.rect.centerx // constants.TILE_SIZE, player.rect.centery // constants.TILE_SIZE)
 
-        for obstacle in obstacle_tiles:
-            if obstacle[1].clipline(line_of_sight): # kiểm tra xem đường nhìn có bị chặn bởi chướng ngại vật không
-                clipped_line = obstacle[1].clipline(line_of_sight) # nếu có thì sẽ nhận giá trị
-        
-        dist = math.sqrt(((self.rect.centerx - player.rect.centerx)**2)+((self.rect.centery - player.rect.centery)**2))
+        # line_of_sight = (
+        #     (self.rect.centerx, self.rect.centery),
+        #     (player.rect.centerx, player.rect.centery),
+        # )
 
-        if not clipped_line and dist > constants.RANGE: # nếu không có chướng ngại vật
-            # kẻ thù ở bên phải người chơi
-            if self.rect.centerx > player.rect.centerx:
-                ai_dx = -constants.ENEMY_SPEED
-            if self.rect.centerx < player.rect.centerx:
-                ai_dx = constants.ENEMY_SPEED
-            if self.rect.centery > player.rect.centery:
-                ai_dy = -constants.ENEMY_SPEED
-            if self.rect.centery < player.rect.centery:
-                ai_dy = constants.ENEMY_SPEED
+        # for obstacle in obstacle_tiles:
+        #     if obstacle[1].clipline(
+        #         line_of_sight
+        #     ):  # kiểm tra xem đường nhìn có bị chặn bởi chướng ngại vật không
+        #         clipped_line = obstacle[1].clipline(
+        #             line_of_sight
+        #         )  # nếu có thì sẽ nhận giá trị
+
+        # dist = math.sqrt(
+        #     ((self.rect.centerx - player.rect.centerx) ** 2)
+        #     + ((self.rect.centery - player.rect.centery) ** 2)
+        # )
+
+        # if not clipped_line and dist > constants.RANGE:  # nếu không có chướng ngại vật
+        #     # kẻ thù ở bên phải người chơi
+        #     if self.rect.centerx > player.rect.centerx:
+        #         ai_dx = -constants.ENEMY_SPEED
+        #     if self.rect.centerx < player.rect.centerx:
+        #         ai_dx = constants.ENEMY_SPEED
+        #     if self.rect.centery > player.rect.centery:
+        #         ai_dy = -constants.ENEMY_SPEED
+        #     if self.rect.centery < player.rect.centery:
+        #         ai_dy = constants.ENEMY_SPEED
+        ai_dx, ai_dy = self.bfs(enemy_pos, player_pos, obstacle_tiles)
+        ai_dx *= constants.ENEMY_SPEED
+        ai_dy *= constants.ENEMY_SPEED
+
+        dist = math.sqrt(((self.rect.centerx - player.rect.centerx) ** 2) + ((self.rect.centery - player.rect.centery) ** 2))
         if self.alive:
             if not self.stunned:
-                self.move(ai_dx,ai_dy,obstacle_tiles)
+                self.move(ai_dx, ai_dy, obstacle_tiles)
 
                 # attck player
                 if dist < constants.ATTACK_RANGE and player.hit == False:
@@ -120,6 +219,21 @@ class Character:
                     player.hit = True
                     player.last_hit = pygame.time.get_ticks()
 
+                # thời gian hồi chiêu quả cầu lửa
+                fireball_cooldown = 700
+                if self.boss:
+                    if dist < 500:
+                        if (
+                            pygame.time.get_ticks() - self.last_attack
+                        ) > fireball_cooldown:
+                            fireball = weapon.Fireball(
+                                fireball_image,
+                                self.rect.centerx,
+                                self.rect.centery,
+                                player.rect.centerx,
+                                player.rect.centery,
+                            )
+                            self.last_attack = pygame.time.get_ticks()
             # check if hit
             if self.hit == True:
                 self.hit = False
@@ -127,21 +241,23 @@ class Character:
                 self.stunned = True
                 self.running = False
                 self.update_action(0)
-            
-            if (pygame.time.get_ticks() - self.last_hit)> stun_cooldown:
-                self.stunned = False
 
+            if (pygame.time.get_ticks() - self.last_hit) > stun_cooldown:
+                self.stunned = False
+        return fireball
 
     def update(self):
         # kiểm tra xem nhân vật còn sống không
         if self.health <= 0:
             self.health = 0
-            self.alive = False  
+            self.alive = False
 
         # cập nhật thời gian nhận sát thương
         hit_cooldown = 1000
         if self.char_type == 0:
-            if self.hit == True and (pygame.time.get_ticks() - self.last_hit > hit_cooldown):
+            if self.hit == True and (
+                pygame.time.get_ticks() - self.last_hit > hit_cooldown
+            ):
                 self.hit = False
 
         # cập nhật hành động
@@ -176,4 +292,3 @@ class Character:
             )
         else:
             screen.blit(flipped_image, self.rect)
-        pygame.draw.rect(screen, constants.RED, self.rect, 1)
