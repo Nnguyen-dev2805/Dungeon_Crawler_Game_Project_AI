@@ -14,7 +14,7 @@ class Item(pygame.sprite.Sprite):
         self.rect.center = (x, y)
         self.dummy_coin = dummy_coin
 
-    def update(self,screen_scroll,player):
+    def update(self,screen_scroll,player,coin_fx,heal_fx):
         # định vị lại vị trí của vật phẩm theo thanh cuộn
         if self.dummy_coin == False:
             self.rect.x += screen_scroll[0]
@@ -24,10 +24,12 @@ class Item(pygame.sprite.Sprite):
         if self.rect.colliderect(player.rect):
             if self.item_type == 0:
                 player.score += 1
+                coin_fx.play()
             elif self.item_type == 1:
                 player.health += 10 
                 if player.health > 100:
                     player.health = 100
+                heal_fx.play()
             self.kill()
 
         animation_cooldown = 150
