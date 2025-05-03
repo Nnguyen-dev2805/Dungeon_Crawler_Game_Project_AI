@@ -2,8 +2,26 @@ import pygame
 import constants
 import weapon
 import math
+import numpy as np
 from collections import deque
+from enum import Enum, auto
+from item import Item
+import random
+import heapq
 
+class CharacterState(Enum):
+    IDLE = auto()
+    MOVING = auto()
+    STUNNED = auto()
+    ATTACKING = auto()
+    DEAD = auto()
+
+class Direction(Enum):
+    NONE = auto()
+    UP = auto()
+    DOWN = auto()
+    LEFT = auto()
+    RIGHT = auto()
 
 class Character:
     def __init__(self, x, y, health, mob_animations, char_type, boss, size):
@@ -22,6 +40,11 @@ class Character:
         self.last_hit = pygame.time.get_ticks()
         self.last_attack = pygame.time.get_ticks()
         self.stunned = False
+
+        self.target_center = None 
+        self.frames_left = 0
+        self.direction = None 
+        self.distance_moved = 0
 
         self.image = self.animation_list[self.action][self.frame_index]
         self.rect = pygame.Rect(
@@ -49,17 +72,16 @@ class Character:
         if dx != 0 and dy != 0:
             dx = dx * (math.sqrt(2) / 2)
             dy = dy * (math.sqrt(2) / 2)
-
+        
         # kiểm tra xem có đụng độ với tường không
         self.rect.x += dx
         for obstacle in obstacle_tiles:
             if obstacle[1].colliderect(self.rect):
-                # kiểm tra xem đang đi về hướng nào
                 if dx > 0:
-                    self.rect.right = obstacle[1].left  # đẩy lại về mép tường
+                    self.rect.right = obstacle[1].left
                 if dx < 0:
                     self.rect.left = obstacle[1].right
-        # kiểm tra lên xuống
+        
         self.rect.y += dy
         for obstacle in obstacle_tiles:
             if obstacle[1].colliderect(self.rect):
@@ -102,10 +124,9 @@ class Character:
 
         return screen_scroll, level_complete
 
-    def bfs(self, start, goal, obstacle_tiles):
-        # print(f"[BFS] Bot ở {start} đang tìm đường đến {goal}")
+    def bfs(self, start, goal, tile_grid,obstacle_tiles):
         obstacles = set(
-            (obstacle[1].x // constants.TILE_SIZE, obstacle[1].y // constants.TILE_SIZE)
+            (int(obstacle[2] / constants.TILE_SIZE), int(obstacle[3] / constants.TILE_SIZE))
             for obstacle in obstacle_tiles
         )
 
@@ -131,83 +152,108 @@ class Character:
                     queue.append(neighbor)
                     visited.add(neighbor)
                     parent[neighbor] = current
-        # Kiểm tra nếu goal không tồn tại trong parent
-        # tưc nhân vật bị bao vây bởi tường
         if goal not in parent:
-            return 0, 0  # Không có đường đi
+            return 0, 0 
     
-        # truy vết đường đi từ goal về start
         path = []
         current = goal
         while current is not None:
             path.append(current)
             current = parent[current]
         path.reverse()
-        # nếu có đường đi, trả về bước đầu tiên
         if len(path) > 1:
             next_step = path[1]
             dx = next_step[0] - start[0]
             dy = next_step[1] - start[1]
+            print(f"[BFS] Next step: {next_step}")
             return dx, dy
-        return 0, 0  # Không có đường đi
+        return 0, 0
 
-    # dùng cho di chuyển quái vật
-    def ai(self, player, obstacle_tiles, screen_scroll, fireball_image):
-        """
-        AI của kẻ thù, sử dụng BFS để tìm đường.
-        :param player: Đối tượng người chơi.
-        :param obstacle_tiles: Danh sách các chướng ngại vật.
-        :param screen_scroll: Dịch chuyển màn hình.
-        :param fireball_image: Hình ảnh quả cầu lửa.
-        """
-        clipped_line = ()
+    def ai(self, player, tile_graph,tile_grid, obstacle_tiles, screen_scroll, fireball_image):
 
         stun_cooldown = 100
 
-        # ai_dx = 0
-        # ai_dy = 0
+        ai_dx = 0
+        ai_dy = 0
 
         fireball = None
+
+        # print(f"Trước {self.rect.x} + {self.rect.y}")
 
         self.rect.x += screen_scroll[0]
         self.rect.y += screen_scroll[1]
 
-        # Vị trí hiện tại của enemy và player
-        enemy_pos = (self.rect.centerx // constants.TILE_SIZE, self.rect.centery // constants.TILE_SIZE)
-        player_pos = (player.rect.centerx // constants.TILE_SIZE, player.rect.centery // constants.TILE_SIZE)
+        # print(f"Sau {self.rect.x} + {self.rect.y}")
 
-        # line_of_sight = (
-        #     (self.rect.centerx, self.rect.centery),
-        #     (player.rect.centerx, player.rect.centery),
+        enemy_tile_x = self.rect.centerx // constants.TILE_SIZE
+        enemy_tile_y = self.rect.centery // constants.TILE_SIZE
+        enemy_pos = (int(enemy_tile_x), int(enemy_tile_y))
+
+        player_tile_x = player.rect.centerx // constants.TILE_SIZE
+        player_tile_y = player.rect.centery // constants.TILE_SIZE
+        player_pos = (int(player_tile_x), int(player_tile_y))
+
+
+        # tile_center = (
+        #     enemy_tile_x * constants.TILE_SIZE + constants.TILE_SIZE / 2,
+        #     enemy_tile_y * constants.TILE_SIZE + constants.TILE_SIZE / 2
         # )
 
-        # for obstacle in obstacle_tiles:
-        #     if obstacle[1].clipline(
-        #         line_of_sight
-        #     ):  # kiểm tra xem đường nhìn có bị chặn bởi chướng ngại vật không
-        #         clipped_line = obstacle[1].clipline(
-        #             line_of_sight
-        #         )  # nếu có thì sẽ nhận giá trị
+        tile_center = (
+            (enemy_tile_x * constants.TILE_SIZE + constants.TILE_SIZE / 2) + screen_scroll[0],
+            (enemy_tile_y * constants.TILE_SIZE + constants.TILE_SIZE / 2) + screen_scroll[1]
+        )
 
-        # dist = math.sqrt(
-        #     ((self.rect.centerx - player.rect.centerx) ** 2)
-        #     + ((self.rect.centery - player.rect.centery) ** 2)
-        # )
+        print(f"Vi tri {enemy_pos} to {player_pos}")
+        print(f"[AI] Tâm kẻ thù: {self.rect.center}, Tâm ô hiện tại: {tile_center}, Tọa độ ô: {enemy_pos}")
 
-        # if not clipped_line and dist > constants.RANGE:  # nếu không có chướng ngại vật
-        #     # kẻ thù ở bên phải người chơi
-        #     if self.rect.centerx > player.rect.centerx:
-        #         ai_dx = -constants.ENEMY_SPEED
-        #     if self.rect.centerx < player.rect.centerx:
-        #         ai_dx = constants.ENEMY_SPEED
-        #     if self.rect.centery > player.rect.centery:
-        #         ai_dy = -constants.ENEMY_SPEED
-        #     if self.rect.centery < player.rect.centery:
-        #         ai_dy = constants.ENEMY_SPEED
-        ai_dx, ai_dy = self.bfs(enemy_pos, player_pos, obstacle_tiles)
-        ai_dx *= constants.ENEMY_SPEED
-        ai_dy *= constants.ENEMY_SPEED
 
+        if self.distance_moved >= constants.TILE_SIZE:
+            self.direction = None
+            self.distance_moved = 0
+
+        # Nếu không có hướng di chuyển (đã di chuyển đủ hoặc chưa có hướng), gọi BFS để tìm hướng mới
+        if self.direction is None:
+            dx, dy = self.bfs(enemy_pos, player_pos, tile_grid, obstacle_tiles)
+            next_step = (enemy_pos[0] + dx, enemy_pos[1] + dy)
+
+            # Kiểm tra xem ô tiếp theo có phải là tường không
+            obstacles = set(
+                (int(obstacle[2] / constants.TILE_SIZE), int(obstacle[3] / constants.TILE_SIZE))
+                for obstacle in obstacle_tiles
+            )
+            if next_step in obstacles:
+                print(f"[AI] Ô tiếp theo {next_step} là tường, không di chuyển")
+                return fireball
+
+            # Xác định hướng di chuyển dựa trên enemy_pos và next_step
+            if next_step[0] > enemy_pos[0]:
+                self.direction = "right"
+            elif next_step[0] < enemy_pos[0]:
+                self.direction = "left"
+            elif next_step[1] > enemy_pos[1]:
+                self.direction = "down"
+            elif next_step[1] < enemy_pos[1]:
+                self.direction = "up"
+            else:
+                self.direction = None
+            self.distance_moved = 0
+            print(f"[AI] Hướng di chuyển: {self.direction}")
+
+        # Di chuyển theo hướng đã xác định
+        if self.direction is not None:
+            if self.direction == "right":
+                ai_dx = constants.ENEMY_SPEED
+            elif self.direction == "left":
+                ai_dx = -constants.ENEMY_SPEED
+            elif self.direction == "down":
+                ai_dy = constants.ENEMY_SPEED
+            elif self.direction == "up":
+                ai_dy = -constants.ENEMY_SPEED
+
+            self.distance_moved += constants.ENEMY_SPEED
+            print(f"[AI] Đã di chuyển: {self.distance_moved}/{constants.TILE_SIZE} pixel")
+        
         dist = math.sqrt(((self.rect.centerx - player.rect.centerx) ** 2) + ((self.rect.centery - player.rect.centery) ** 2))
         if self.alive:
             if not self.stunned:
@@ -284,6 +330,7 @@ class Character:
             self.update_time = pygame.time.get_ticks()
 
     def draw(self, screen):
+        # pygame.draw.rect(screen, (255, 0, 0), self.rect, 2)
         flipped_image = pygame.transform.flip(self.image, self.flip, False)
         if self.char_type == 0:
             screen.blit(
@@ -292,3 +339,40 @@ class Character:
             )
         else:
             screen.blit(flipped_image, self.rect)
+        if self.char_type != 0:
+            enemy_tile_x = self.rect.centerx // constants.TILE_SIZE
+            enemy_tile_y = self.rect.centery // constants.TILE_SIZE
+            tile_center = (
+                enemy_tile_x * constants.TILE_SIZE + constants.TILE_SIZE / 2,
+                enemy_tile_y * constants.TILE_SIZE + constants.TILE_SIZE / 2
+            )
+            pygame.draw.circle(screen, (0, 255, 0), tile_center, 3)  
+            pygame.draw.circle(screen, (255, 255, 0), self.rect.center, 3)
+            # if self.target_center is not None:
+            #     pygame.draw.circle(screen, (255, 0, 0), self.target_center, 3)  # Màu đỏ
+
+def BFS(graph,start,goal):
+    tosearch = deque([start])
+    visited = {start: None}
+
+    while tosearch:
+        node = tosearch.popleft()
+        if node == goal:
+            break
+        for neighbor in graph.neighbors(node):
+            if neighbor not in visited:
+                tosearch.append(neighbor)
+                visited[neighbor] = node
+
+    return visited
+
+def getPath(pathdict,start,goal):
+    if goal not in pathdict:
+        return []
+    currenttile = goal
+    path = [pathdict]
+    while currenttile != start:
+        currenttile = pathdict[currenttile]
+        path.append(currenttile)
+    path.reverse()
+    return path
