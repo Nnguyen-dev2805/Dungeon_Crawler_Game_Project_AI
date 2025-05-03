@@ -3,7 +3,8 @@ import csv
 import constants
 import math
 from pygame import mixer
-from character import Character
+from player import Player
+from enemy import Enemy
 from weapon import Weapon
 from item import Item
 from world import World
