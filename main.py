@@ -1,8 +1,10 @@
 import pygame
 import csv
 import constants
+import math
 from pygame import mixer
-from character import Character
+from character_Astar import Character
+# from character_BFS import Character
 from weapon import Weapon
 from item import Item
 from world import World
@@ -18,7 +20,7 @@ pygame.display.set_caption("Dungeon Crawler")
 clock = pygame.time.Clock()
 
 # biến xác định level
-level = 1
+level = 12
 
 start_game = False
 pause_game = False
@@ -144,10 +146,8 @@ def draw_grid():
 
 # hàm reset level
 def reset_level():
-    damage_text_group.empty()
-    arrow_group.empty()
-    item_group.empty()
-    fireball_group.empty() 
+    for group in [damage_text_group, arrow_group, item_group, fireball_group]:
+        group.empty()
     data =[] 
     for row in range(constants.ROWS):
         r = [-1] * constants.COLS
@@ -250,14 +250,15 @@ while run:
         screen.fill(constants.MENU_BG)
         if start_button.draw(screen):
             start_game = True
-            start_intro = True
+            start_intro = False
+            # start_intro = True
         if exit_button.draw(screen):
             run = False
     else:
         if pause_game == True:
             screen.fill(constants.MENU_BG)
             if resume_button.draw(screen):
-                pause_game = False
+                pause_game = False 
             if exit_button.draw(screen):
                 run = False
         else:
@@ -286,12 +287,11 @@ while run:
 
                 # cập nhật quái vật
                 for enemy in enemy_list:
-                    fireball = enemy.ai(player,world.obstacle_tiles,screen_scroll,fireball_image)
-                    if fireball:
-                        # print(f"enemy fireball: {fireball}")
-                        fireball_group.add(fireball)
                     if enemy.alive:
-                        enemy.update()
+                        fireball = enemy.ai(player,world.weighted_tile_grid,world.tile_grid,world.obstacle_tiles,screen_scroll,fireball_image)
+                        if fireball:
+                            fireball_group.add(fireball)
+                    enemy.update(item_group, coin_images, red_potion)
 
                 # cập nhật nhân vật
                 player.update()
