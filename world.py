@@ -79,7 +79,6 @@ class World:
 
         for tile in self.obstacle_tiles:
             pygame.draw.rect(screen, (255, 0, 0), tile[1], 2)
-
 class TileGraph:
     """
     Đồ thị vô hướng với các nút là ô 
