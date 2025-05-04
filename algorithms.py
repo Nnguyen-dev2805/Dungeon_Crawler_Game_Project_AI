@@ -3,7 +3,7 @@ import math
 import heapq
 from collections import deque
 
-def a_star(start, goal, tile_grid, obstacle_tiles):
+def a_star(start, goal, tile_grid, obstacle_tiles,map_width, map_height):
     obstacles = set(
         (int(obstacle[2] / constants.TILE_SIZE), int(obstacle[3] / constants.TILE_SIZE))
         for obstacle in obstacle_tiles
@@ -16,7 +16,10 @@ def a_star(start, goal, tile_grid, obstacle_tiles):
     visited = set()
     path = []
 
-    directions = [(0, 1), (1, 0), (0, -1), (-1, 0)]
+    directions = [
+        (0, 1), (1, 0), (0, -1), (-1, 0), 
+        (-1, -1), (-1, 1), (1, -1), (1, 1)  
+    ]
 
     while open_set:
         current_f, current = heapq.heappop(open_set)
@@ -26,10 +29,47 @@ def a_star(start, goal, tile_grid, obstacle_tiles):
             continue
         visited.add(current)
         for direction in directions:
-            neighbor = (current[0] + direction[0], current[1] + direction[1])
-            if (neighbor[0] < 0 or neighbor[1] < 0 or neighbor in obstacles):
+            dx, dy = direction
+            neighbor = (current[0] + dx, current[1] + dy)
+            if (neighbor[0] < 0 or neighbor[0] >= map_width or
+                neighbor[1] < 0 or neighbor[1] >= map_height or
+                neighbor in obstacles):
                 continue
-            tentative_g_score = g_score[current] + 1
+
+            can_move_diagonally = True
+            if dx != 0 and dy != 0:  
+                if dx == 1 and dy == 1:  # RIGHT_DOWN
+                    right_tile = (current[0] + 1, current[1])  # Ô bên phải của current
+                    below_tile = (current[0], current[1] + 1)  # Ô phía dưới của current
+                    if (right_tile[0] < map_width and right_tile in obstacles) or \
+                       (below_tile[1] < map_height and below_tile in obstacles):
+                        can_move_diagonally = False
+                elif dx == -1 and dy == 1:  # LEFT_DOWN
+                    left_tile = (current[0] - 1, current[1])   # Ô bên trái của current
+                    below_tile = (current[0], current[1] + 1)  # Ô phía dưới của current
+                    if (left_tile[0] >= 0 and left_tile in obstacles) or \
+                       (below_tile[1] < map_height and below_tile in obstacles):
+                        can_move_diagonally = False
+                elif dx == 1 and dy == -1:  # RIGHT_UP
+                    right_tile = (current[0] + 1, current[1])  # Ô bên phải của current
+                    above_tile = (current[0], current[1] - 1)  # Ô phía trên của current
+                    if (right_tile[0] < map_width and right_tile in obstacles) or \
+                       (above_tile[1] >= 0 and above_tile in obstacles):
+                        can_move_diagonally = False
+                elif dx == -1 and dy == -1:  # LEFT_UP
+                    left_tile = (current[0] - 1, current[1])   # Ô bên trái của current
+                    above_tile = (current[0], current[1] - 1)  # Ô phía trên của current
+                    if (left_tile[0] >= 0 and left_tile in obstacles) or \
+                       (above_tile[1] >= 0 and above_tile in obstacles):
+                        can_move_diagonally = False
+
+            if not can_move_diagonally:
+                continue
+
+            # Chi phí di chuyển: 1 cho hướng chính, sqrt(2) cho hướng chéo
+            # cost = 1 if direction in [(0, 1), (1, 0), (0, -1), (-1, 0)] else math.sqrt(2)
+            cost = 1 if direction in [(0, 1), (1, 0), (0, -1), (-1, 0)] else 1.1
+            tentative_g_score = g_score[current] + cost
             if tentative_g_score < g_score.get(neighbor, float('inf')):
                 came_from[neighbor] = current
                 g_score[neighbor] = tentative_g_score
@@ -38,6 +78,7 @@ def a_star(start, goal, tile_grid, obstacle_tiles):
     return (0, 0), path
 
 def heuristic(a, b):
+    # return math.sqrt((a[0] - b[0])**2 + (a[1] - b[1])**2)
     return abs(a[0] - b[0]) + abs(a[1] - b[1])
 
 def reconstruct_path(came_from, current, start):
@@ -53,7 +94,7 @@ def reconstruct_path(came_from, current, start):
         return (dx, dy), path
     return (0, 0), path
 
-def bfs(start, goal, tile_grid, obstacle_tiles):
+def bfs(start, goal, tile_grid, obstacle_tiles, map_width, map_height):
     obstacles = set(
         (int(obstacle[2] / constants.TILE_SIZE), int(obstacle[3] / constants.TILE_SIZE))
         for obstacle in obstacle_tiles
@@ -64,23 +105,48 @@ def bfs(start, goal, tile_grid, obstacle_tiles):
     visited.add(start)
     parent = {start: None}
 
-    directions = [(0, 1), (1, 0), (0, -1), (-1, 0)]
+    # directions = [(0, 1), (1, 0), (0, -1), (-1, 0)]
+    directions = [
+        (0, 1), (1, 0), (0, -1), (-1, 0),  # 4 hướng chính
+        (-1, -1), (-1, 1), (1, -1), (1, 1)  # 4 hướng chéo
+    ]
 
     while queue:
         current = queue.popleft()
         if current == goal:
             break
         for direction in directions:
-            neighbor = (current[0] + direction[0], current[1] + direction[1])
-            if (
-                neighbor not in visited
-                and neighbor not in obstacles
-                and neighbor[0] >= 0
-                and neighbor[1] >= 0
-            ):
+            dx, dy = direction
+            neighbor = (current[0] + dx, current[1] + dy)
+            # neighbor = (current[0] + direction[0], current[1] + direction[1])
+            can_move_diagonally = True
+            if dx != 0 and dy != 0:  # Đây là hướng chéo
+                if dy > 0:  # Di chuyển xuống (LEFT_DOWN hoặc RIGHT_DOWN)
+                    above_tile = (neighbor[0], neighbor[1] - 1)
+                    if above_tile[1] >= 0 and above_tile in obstacles:
+                        can_move_diagonally = False
+                elif dy < 0:  # Di chuyển lên (LEFT_UP hoặc RIGHT_UP)
+                    below_tile = (neighbor[0], neighbor[1] + 1)
+                    if below_tile[1] < map_height and below_tile in obstacles:
+                        can_move_diagonally = False
+
+            if not can_move_diagonally:
+                continue
+
+            if neighbor not in visited:
                 queue.append(neighbor)
                 visited.add(neighbor)
                 parent[neighbor] = current
+
+            # if (
+            #     neighbor not in visited
+            #     and neighbor not in obstacles
+            #     and neighbor[0] >= 0
+            #     and neighbor[1] >= 0
+            # ):
+            #     queue.append(neighbor)
+            #     visited.add(neighbor)
+            #     parent[neighbor] = current
     if goal not in parent:
         return 0, 0
 
