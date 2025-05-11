@@ -189,3 +189,91 @@ def getPath(pathdict, start, goal):
     path.append(start)
     path.reverse()
     return path
+
+
+#Local search :  beam search
+def beam_search(start, goal, tile_grid, obstacle_tiles, map_width, map_height):
+    obstacles = set(
+        (int(obstacle[2] / constants.TILE_SIZE), int(obstacle[3] / constants.TILE_SIZE))
+        for obstacle in obstacle_tiles
+    )
+
+    # Initialize beam with start node
+    Beam = [(0, start, [], 0)]  # (heuristic, current, actions, depth)
+    visited = set()
+    visited.add(start)
+
+    directions = [
+        (0, 1), (1, 0), (0, -1), (-1, 0),  # 4 hướng chính
+        (-1, -1), (-1, 1), (1, -1), (1, 1)  # 4 hướng chéo
+    ]
+
+    while Beam:
+        h, current, actions, depth = heapq.heappop(Beam)
+        
+        if current == goal:
+            if actions:
+                next_step = actions[0]
+                dx = next_step[0] - start[0]
+                dy = next_step[1] - start[1]
+                return (dx, dy), actions
+            return (0, 0), []
+
+        # if depth >= 20:  # Giới hạn độ sâu tìm kiếm
+        #     continue
+
+        # Lưu các node con có heuristic tốt nhất
+        children = []
+        for direction in directions:
+            dx, dy = direction
+            neighbor = (current[0] + dx, current[1] + dy)
+            
+            # Kiểm tra biên và chướng ngại vật
+            if (neighbor[0] < 0 or neighbor[0] >= map_width or
+                neighbor[1] < 0 or neighbor[1] >= map_height or
+                neighbor in obstacles):
+                continue
+
+            # Kiểm tra di chuyển chéo
+            can_move_diagonally = True
+            if dx != 0 and dy != 0:
+                if dx == 1 and dy == 1:  # RIGHT_DOWN
+                    right_tile = (current[0] + 1, current[1])
+                    below_tile = (current[0], current[1] + 1)
+                    if (right_tile[0] < map_width and right_tile in obstacles) or \
+                       (below_tile[1] < map_height and below_tile in obstacles):
+                        can_move_diagonally = False
+                elif dx == -1 and dy == 1:  # LEFT_DOWN
+                    left_tile = (current[0] - 1, current[1])
+                    below_tile = (current[0], current[1] + 1)
+                    if (left_tile[0] >= 0 and left_tile in obstacles) or \
+                       (below_tile[1] < map_height and below_tile in obstacles):
+                        can_move_diagonally = False
+                elif dx == 1 and dy == -1:  # RIGHT_UP
+                    right_tile = (current[0] + 1, current[1])
+                    above_tile = (current[0], current[1] - 1)
+                    if (right_tile[0] < map_width and right_tile in obstacles) or \
+                       (above_tile[1] >= 0 and above_tile in obstacles):
+                        can_move_diagonally = False
+                elif dx == -1 and dy == -1:  # LEFT_UP
+                    left_tile = (current[0] - 1, current[1])
+                    above_tile = (current[0], current[1] - 1)
+                    if (left_tile[0] >= 0 and left_tile in obstacles) or \
+                       (above_tile[1] >= 0 and above_tile in obstacles):
+                        can_move_diagonally = False
+
+            if not can_move_diagonally:
+                continue
+
+            if neighbor not in visited:
+                visited.add(neighbor)
+                new_actions = actions + [neighbor]
+                h_score = heuristic(neighbor, goal)
+                children.append((h_score, neighbor, new_actions, depth + 1))
+
+        # Thêm k node con tốt nhất vào beam
+        Beam.extend(children)
+        Beam.sort()  # Sắp xếp theo heuristic
+        Beam = Beam[:5]  # Giữ lại 5 node tốt nhất
+
+    return (0, 0), []  # Không tìm thấy đường đi

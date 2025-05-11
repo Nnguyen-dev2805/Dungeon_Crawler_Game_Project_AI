@@ -9,7 +9,7 @@ import heapq
 from collections import deque
 from enum import Enum, auto
 from item import Item
-from algorithms import a_star, bfs
+from algorithms import a_star, bfs, beam_search
 
 
 class CharacterState(Enum):
@@ -106,7 +106,7 @@ class Enemy:
         )
 
         if dist < constants.ATTACK_RANGE and not player.hit:
-            player.health -= 10
+            player.health -= 0
             player.hit = True
             player.last_hit = pygame.time.get_ticks()
 
@@ -189,7 +189,8 @@ class Enemy:
 
         if self.direction == Direction.NONE:
             if not self.path or (self.path and (enemy_pos[0], enemy_pos[1]) == self.path[-1]):
-                (dx, dy), self.path = a_star(enemy_pos, player_pos, tile_grid, obstacle_tiles, map_width, map_height)
+                # (dx, dy), self.path = a_star(enemy_pos, player_pos, tile_grid, obstacle_tiles, map_width, map_height)
+                (dx, dy), self.path = beam_search(enemy_pos, player_pos, tile_grid, obstacle_tiles, map_width, map_height)
                 if not self.path:  
                     directions = [
                         (0, 1), (1, 0), (0, -1), (-1, 0),

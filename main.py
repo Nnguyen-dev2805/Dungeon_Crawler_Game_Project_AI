@@ -20,7 +20,7 @@ pygame.display.set_caption("Dungeon Crawler")
 clock = pygame.time.Clock()
 
 # biến xác định level
-level = 13
+level = 1
 
 start_game = False
 pause_game = False

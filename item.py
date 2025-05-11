@@ -1,5 +1,6 @@
 # class để thêm vật phẩm
 import pygame
+import random
 
 class Item(pygame.sprite.Sprite):
     # thêm biến dummy để tránh đồng tiền trên thanh panel di chuyển
@@ -13,8 +14,23 @@ class Item(pygame.sprite.Sprite):
         self.rect = self.image.get_rect()
         self.rect.center = (x, y)
         self.dummy_coin = dummy_coin
+        
+        # Drop animation properties
+        self.is_dropping = not dummy_coin  # Only drop animation for non-dummy items
+        self.drop_start_y = y - 30  # Start 50 pixels above final position
+        self.drop_speed = 3
+        self.rect.y = self.drop_start_y
 
     def update(self,screen_scroll,player,coin_fx,heal_fx):
+        # Handle drop animation
+        if self.is_dropping:
+            target_y = self.drop_start_y + 30  # Final position
+            if self.rect.y < target_y:
+                self.rect.y += self.drop_speed
+            else:
+                self.is_dropping = False
+                self.rect.y = target_y
+
         # định vị lại vị trí của vật phẩm theo thanh cuộn
         if self.dummy_coin == False:
             self.rect.x += screen_scroll[0]
