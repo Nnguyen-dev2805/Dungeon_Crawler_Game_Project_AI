@@ -1,8 +1,8 @@
 # class để vẽ bản đồ
 import constants
 from item import Item
-from character_Astar import Character
-# from character_BFS import Character
+from player import Player
+from enemy import Enemy
 import pygame
 
 class World:
@@ -38,25 +38,24 @@ class World:
                     self.obstacle_tiles.append(tile_data)
                 elif tile == 8:
                     self.exit_tile = tile_data
-                # thêm image data vào map_tiles
                 elif tile == 9:
                     coin = Item(image_x,image_y,0,item_images[0])
                     self.item_list.append(coin)
                     tile_data[0] = tile_list[0]
                 elif tile == 10:
-                    potion = Item(image_x,image_y,1,[item_images[1]]) # vì máu chỉnh có 1 ảnh
+                    potion = Item(image_x,image_y,1,[item_images[1]])
                     self.item_list.append(potion)
                     tile_data[0] = tile_list[0]
                 elif tile == 11:
-                    player = Character(image_x,image_y,100,mob_animations,0,False,1)
+                    player = Player(image_x,image_y,100,mob_animations,1)
                     self.player = player
                     tile_data[0] = tile_list[0]
                 elif tile >= 12 and tile <= 16:
-                    enemy = Character(image_x,image_y,100,mob_animations,tile - 11,False,1)
+                    enemy = Enemy(image_x,image_y,100,mob_animations,tile - 11,False,1)
                     self.character_list.append(enemy)
                     tile_data[0] = tile_list[0] 
                 elif tile == 17:
-                    enemy = Character(image_x,image_y,100,mob_animations,6,True,2)
+                    enemy = Enemy(image_x,image_y,100,mob_animations,6,True,2)
                     self.character_list.append(enemy)
                     tile_data[0] = tile_list[0]
                 if tile >= 0:
@@ -82,7 +81,6 @@ class World:
 
         for tile in self.obstacle_tiles:
             pygame.draw.rect(screen, (255, 0, 0), tile[1], 2)
-
 class TileGraph:
     """
     Đồ thị vô hướng với các nút là ô 

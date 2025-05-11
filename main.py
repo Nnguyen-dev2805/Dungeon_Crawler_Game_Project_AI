@@ -3,8 +3,8 @@ import csv
 import constants
 import math
 from pygame import mixer
-from character_Astar import Character
-# from character_BFS import Character
+from player import Player
+from enemy import Enemy
 from weapon import Weapon
 from item import Item
 from world import World
@@ -210,6 +210,9 @@ with open(f'levels/level{level}_data.csv',newline='') as csvfile:
 world = World()
 world.process_data(world_data,tile_list,item_images,mob_animations)
 
+map_width = len(world_data[0])
+map_height = len(world_data)
+
 # tạo nhân vật
 player = world.player
 
@@ -288,7 +291,7 @@ while run:
                 # cập nhật quái vật
                 for enemy in enemy_list:
                     if enemy.alive:
-                        fireball = enemy.ai(player,world.weighted_tile_grid,world.tile_grid,world.obstacle_tiles,screen_scroll,fireball_image)
+                        fireball = enemy.ai(player,world.weighted_tile_grid,world.tile_grid,world.obstacle_tiles,screen_scroll,fireball_image,map_width, map_height)
                         if fireball:
                             fireball_group.add(fireball)
                     enemy.update(item_group, coin_images, red_potion)

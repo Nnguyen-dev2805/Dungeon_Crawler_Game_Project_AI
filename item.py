@@ -1,5 +1,6 @@
 # class để thêm vật phẩm
 import pygame
+import random
 
 class Item(pygame.sprite.Sprite):
     # thêm biến dummy để tránh đồng tiền trên thanh panel di chuyển
