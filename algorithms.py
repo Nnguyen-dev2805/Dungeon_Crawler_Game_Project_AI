@@ -133,6 +133,11 @@ def bfs(start, goal, tile_grid, obstacle_tiles, map_width, map_height):
             if not can_move_diagonally:
                 continue
 
+            if (neighbor[0] < 0 or neighbor[0] >= map_width or
+                neighbor[1] < 0 or neighbor[1] >= map_height or
+                neighbor in obstacles):
+                continue
+    
             if neighbor not in visited:
                 queue.append(neighbor)
                 visited.add(neighbor)
@@ -219,7 +224,7 @@ def beam_search(start, goal, tile_grid, obstacle_tiles, map_width, map_height):
                 return (dx, dy), actions
             return (0, 0), []
 
-        # if depth >= 20:  # Giới hạn độ sâu tìm kiếm
+        # if depth >= 10:  # Giới hạn độ sâu tìm kiếm
         #     continue
 
         # Lưu các node con có heuristic tốt nhất

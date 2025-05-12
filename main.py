@@ -20,7 +20,7 @@ pygame.display.set_caption("Dungeon Crawler")
 clock = pygame.time.Clock()
 
 # biến xác định level
-level = 12
+level = 3
 
 start_game = False
 pause_game = False
@@ -291,7 +291,8 @@ while run:
                 # cập nhật quái vật
                 for enemy in enemy_list:
                     if enemy.alive:
-                        fireball = enemy.ai(player,world.weighted_tile_grid,world.tile_grid,world.obstacle_tiles,screen_scroll,fireball_image,map_width, map_height)
+                        fireball = enemy.ai(player,world.weighted_tile_grid,world_data,world.obstacle_tiles,screen_scroll,fireball_image,map_width, map_height)
+                        # fireball = enemy.ai(player,world.weighted_tile_grid,world.tile_grid,world.obstacle_tiles,screen_scroll,fireball_image,map_width, map_height)
                         if fireball:
                             fireball_group.add(fireball)
                     enemy.update(item_group, coin_images, red_potion)

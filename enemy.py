@@ -5,6 +5,7 @@ import math
 import numpy as np
 import random
 import heapq
+from collections import deque
 
 from collections import deque
 from enum import Enum, auto
@@ -18,6 +19,7 @@ class CharacterState(Enum):
     STUNNED = auto()
     ATTACKING = auto()
     DEAD = auto()
+    FLEEING = auto()
 
 class Direction(Enum):
     NONE = auto()
@@ -66,11 +68,12 @@ class Enemy:
         self.step_size = 4.0  
         self.remaining_distance = constants.TILE_SIZE * math.sqrt(2) - (self.diagonal_steps * self.step_size)
         self.diagonal_dx = 2 * math.sqrt(2)  
-        self.diagonal_dy = 2 * math.sqrt(2) 
+        self.diagonal_dy = 2 * math.sqrt(2)   
         self.final_dx = self.remaining_distance / math.sqrt(2)  
         self.final_dy = self.remaining_distance / math.sqrt(2)  
         self.straight_dx = self.step_size  
         self.straight_dy = self.step_size 
+        self.is_fleeing = False
 
     def move(self, dx, dy, obstacle_tiles):
         self.running = False
@@ -127,7 +130,7 @@ class Enemy:
     def handle_movement(self, player, tile_grid, obstacle_tiles,map_width, map_height):
         ai_dx = 0
         ai_dy = 0
-
+        # print(map_height," ",map_width)
         enemy_tile_x = self.rect.centerx // constants.TILE_SIZE
         enemy_tile_y = self.rect.centery // constants.TILE_SIZE
         enemy_pos = (int(enemy_tile_x), int(enemy_tile_y))
@@ -188,10 +191,44 @@ class Enemy:
                     self.direction = Direction.NONE
 
         if self.direction == Direction.NONE:
+            # if self.is_fleeing and self.path and enemy_pos == self.path[-1]:
+            #     self.direction = Direction.NONE
+            #     self.path = deque()
+            #     self.is_fleeing = False
+            #     self.state = CharacterState.IDLE
+            #     print(f"Enemy reached safe position: {enemy_pos}, standing still")
+            #     return 0, 0
             if not self.path or (self.path and (enemy_pos[0], enemy_pos[1]) == self.path[-1]):
                 # (dx, dy), self.path = a_star(enemy_pos, player_pos, tile_grid, obstacle_tiles, map_width, map_height)
-                (dx, dy), self.path = beam_search(enemy_pos, player_pos, tile_grid, obstacle_tiles, map_width, map_height)
+                # (dx, dy), self.path = beam_search(enemy_pos, player_pos, tile_grid, obstacle_tiles, map_width, map_height)
+                # (dx, dy) = bfs(enemy_pos, player_pos, tile_grid, obstacle_tiles, map_width, map_height)
+                # Kiểm tra máu để quyết định đuổi theo hoặc chạy trốn
+                health_threshold = 0.9 * self.max_health  # 30% máu
+                if self.health <= health_threshold:
+                    print("Enemy is attempting to flee")
+                    # Chạy trốn: Tìm điểm an toàn
+                    obstacles = set(
+                    (int(obstacle[2] / constants.TILE_SIZE), int(obstacle[3] / constants.TILE_SIZE))
+                    for obstacle in obstacle_tiles
+                    ) 
+                    safe_pos = self.find_safe_position(player_pos, tile_grid,obstacles, map_width, map_height,obstacle_tiles)
+                    print(f"Player position: {player_pos}")
+                    print(f"Safe position: {safe_pos}")
+                    if safe_pos:
+                        # print(f"Fleeing to safe_pos: {safe_pos}")
+                        (dx, dy), self.path = a_star(enemy_pos, safe_pos, tile_grid, obstacle_tiles, map_width, map_height)
+                        self.is_fleeing = True
+                    else:
+                        # print("No safe position, moving randomly")
+                        dx, dy, self.path = 0, 0, []  # Không tìm được điểm an toàn
+                        self.is_fleeing = False
+                else:
+                    # Đuổi theo người chơi
+                    self.is_fleeing = False
+                    # (dx, dy), self.path = a_star(enemy_pos, player_pos, tile_grid, obstacle_tiles, map_width, map_height)
+                    (dx, dy), self.path = beam_search(enemy_pos, player_pos, tile_grid, obstacle_tiles, map_width, map_height)
                 if not self.path:  
+                    # print("No path found, moving randomly")
                     directions = [
                         (0, 1), (1, 0), (0, -1), (-1, 0),
                         (-1, -1), (-1, 1), (1, -1), (1, 1)
@@ -252,6 +289,12 @@ class Enemy:
         
         return ai_dx, ai_dy
 
+
+
+
+
+
+   
     
     def handle_stun(self):
         stun_cooldown = 100
@@ -380,3 +423,35 @@ class Enemy:
             self.update_action(1)
         elif self.state == CharacterState.ATTACKING:
             self.update_action(2)
+    def find_safe_position(self, player_pos, tile_grid, obstacles, map_width, map_height, obstacle_tiles, min_distance=3, radius=4):
+        """
+        Tìm vị trí an toàn xa player_pos nhất, trong bán kính 'radius' và cách ít nhất min_distance ô.
+        """
+        max_dist = 0
+        best_pos = None
+        enemy_tile_x = self.rect.centerx // constants.TILE_SIZE
+        enemy_tile_y = self.rect.centery // constants.TILE_SIZE
+        enemy_pos = (int(enemy_tile_x), int(enemy_tile_y))
+
+        x_start = max(0, player_pos[0] - 5)
+        x_end = min(map_width, player_pos[0] + 5)
+        y_start = max(0, player_pos[1] - 5)
+        y_end = min(map_height, player_pos[1] + 5)
+        for x in range(x_start,x_end):
+            for y in range(y_start,y_end):
+                if (tile_grid[x][y]== -1 or tile_grid[x][y] == 7 ):
+                    continue
+                # Kiểm tra có phải ô hợp lệ không
+                (step_dx, step_dy), path = a_star(enemy_pos, (x, y), tile_grid, obstacle_tiles, map_width, map_height)
+                if path is None:
+                    continue
+                dist = abs(x - player_pos[0]) + abs(y - player_pos[1])
+                if dist >= min_distance and dist > max_dist:
+                    max_dist = dist
+                    best_pos = (x, y)
+
+        if best_pos is None and min_distance > 1:
+            return self.find_safe_position(player_pos, tile_grid, obstacles, map_width, map_height, obstacle_tiles, min_distance - 1, radius)
+        return best_pos
+
+
