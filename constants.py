@@ -1,8 +1,10 @@
 # Lưu các biến hằng số của game
 
 FPS = 60  # tốc độ khung hình
-SCREEN_WIDTH = 800
-SCREEN_HEIGHT = 600
+# SCREEN_WIDTH = 800
+# SCREEN_HEIGHT = 600
+SCREEN_WIDTH = 1200
+SCREEN_HEIGHT = 800
 SCALE = 3 # tỉ lệ cho hình ảnh trong game
 WEAPON_SCALE = 1.5 # tỉ lệ cho vũ khí
 FIREBALL_SCALE = 1 # tỉ lệ cho quả cầu lửa

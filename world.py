@@ -49,11 +49,11 @@ class World:
                     self.player = player
                     tile_data[0] = tile_list[0]
                 elif tile >= 12 and tile <= 16:
-                    enemy = Enemy(image_x,image_y,100,mob_animations,tile - 11,False,1)
+                    enemy = Enemy(image_x,image_y,100,mob_animations,tile - 11,False,1,map_width,map_height)
                     self.character_list.append(enemy)
                     tile_data[0] = tile_list[0] 
                 elif tile == 17:
-                    enemy = Enemy(image_x,image_y,100,mob_animations,6,True,2)
+                    enemy = Enemy(image_x,image_y,100,mob_animations,6,True,2,map_width,map_height)
                     self.character_list.append(enemy)
                     tile_data[0] = tile_list[0]
                 if tile >= 0:

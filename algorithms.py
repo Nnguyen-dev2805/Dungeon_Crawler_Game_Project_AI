@@ -18,7 +18,7 @@ def a_star(start, goal, tile_grid, obstacle_tiles,map_width, map_height):
 
     directions = [
         (0, 1), (1, 0), (0, -1), (-1, 0), 
-        (-1, -1), (-1, 1), (1, -1), (1, 1)  
+        # (-1, -1), (-1, 1), (1, -1), (1, 1)  
     ]
 
     while open_set:
