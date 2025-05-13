@@ -16,13 +16,34 @@ class World:
         self.tile_graph = None
         self.tile_grid = None
         self.weighted_tile_grid = None
+        self.original_tile_grid = None
+        self.wall_positions = set()
     
-    def process_data(self, data,tile_list,item_images,mob_animations):
+    def process_data(self, data,tile_list,item_images,mob_animations,level):
         map_width = len(data[0])
         map_height = len(data)
-        self.tile_graph = TileGraph(map_width, map_height)
-        self.tile_grid = TileGrid(map_width, map_height)
+        self.tile_graph = data
+        self.tile_grid = [row[:] for row in data]  
+        self.original_tile_grid = [row[:] for row in data]
         self.weighted_tile_grid = WeightedTileGrid(map_width, map_height)
+
+        # Xác định thuật toán tấn công và kiểu tuần tra dựa trên level
+        if level == 1:
+            attack_algorithm = "a_star"
+            patrol_style = "belief"
+        elif level == 2:
+            attack_algorithm = "bfs"
+            patrol_style = "belief"
+        elif level == 3:
+            attack_algorithm = "beam_search"
+            patrol_style = "qlearning"
+        elif level == 4:
+            attack_algorithm = "backtracking"
+            patrol_style = "qlearning"
+        else:  # Mặc định cho các level khác
+            attack_algorithm = "a_star"
+            patrol_style = "belief"
+
         
         for y, row in enumerate(data):
             for x, tile in enumerate(row):
@@ -34,6 +55,7 @@ class World:
                 tile_data = [image,image_rect,image_x,image_y]
                 if tile == 7:
                     self.obstacle_tiles.append(tile_data)
+                    self.wall_positions.add((x, y))
                 elif tile == 8:
                     self.exit_tile = tile_data
                 elif tile == 9:
@@ -45,24 +67,25 @@ class World:
                     self.item_list.append(potion)
                     tile_data[0] = tile_list[0]
                 elif tile == 11:
-                    player = Player(image_x,image_y,100,mob_animations,1)
+                    player = Player(image_x,image_y,100,mob_animations,1,(x,y))
                     self.player = player
                     tile_data[0] = tile_list[0]
                 elif tile >= 12 and tile <= 16:
-                    enemy = Enemy(image_x,image_y,100,mob_animations,tile - 11,False,1)
+                    enemy = Enemy(image_x,image_y,100,mob_animations,tile - 11,False,1,map_width,map_height,self.tile_grid,(x,y),self.wall_positions,attack_algorithm) # tọa độ enemy
+                    enemy.patrol_style = patrol_style   
                     self.character_list.append(enemy)
                     tile_data[0] = tile_list[0] 
                 elif tile == 17:
-                    enemy = Enemy(image_x,image_y,100,mob_animations,6,True,2)
+                    enemy = Enemy(image_x,image_y,100,mob_animations,6,True,2,map_width,map_height)
                     self.character_list.append(enemy)
                     tile_data[0] = tile_list[0]
                 if tile >= 0:
                     self.map_tiles.append(tile_data)
 
-        dungeon_dict = {(x, y): {"tile_id": tile} for y, row in enumerate(data) for x, tile in enumerate(row)}
-        self.tile_graph.get_dungeon_edges(dungeon_dict, wall_tile_id=7)
-        self.tile_grid.getwalls(self.obstacle_tiles)
-        self.weighted_tile_grid.getwalls(self.obstacle_tiles)
+        # dungeon_dict = {(x, y): {"tile_id": tile} for y, row in enumerate(data) for x, tile in enumerate(row)}
+        # self.tile_graph.get_dungeon_edges(dungeon_dict, wall_tile_id=7)
+        # self.tile_grid.getwalls(self.obstacle_tiles)
+        # self.weighted_tile_grid.getwalls(self.obstacle_tiles)
     
 
     def update(self,screen_roll):

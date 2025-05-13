@@ -20,7 +20,7 @@ class Direction(Enum):
     RIGHT = auto()
 
 class Player:
-    def __init__(self, x, y, health, mob_animations, size):
+    def __init__(self, x, y, health, mob_animations, size,player_pos):
         self.char_type = 0 
         self.score = 0
         self.flip = False
@@ -35,6 +35,7 @@ class Player:
         self.hit = False
         self.last_hit = pygame.time.get_ticks()
         self.state = CharacterState.IDLE
+        self.player_pos_csv = player_pos
 
         self.image = self.animation_list[self.action][self.frame_index]
         self.rect = pygame.Rect(
@@ -95,6 +96,7 @@ class Player:
             screen_scroll[1] = constants.SCROLL_THRESH - self.rect.top
             self.rect.top = constants.SCROLL_THRESH
 
+        # print(f"CCCCCCCCCCCCCCCCCCCCCCCC {screen_scroll}")
         return screen_scroll, level_complete
 
     def update(self):
@@ -130,4 +132,7 @@ class Player:
             self.image,
             (self.rect.x, self.rect.y - constants.SCALE * constants.OFFSET),
         )
+
+    def get_map_pos(self):
+        return (self.rect.centerx // constants.TILE_SIZE, self.rect.centery // constants.TILE_SIZE)
 

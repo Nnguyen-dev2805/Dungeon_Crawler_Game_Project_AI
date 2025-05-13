@@ -14,7 +14,34 @@ class Item(pygame.sprite.Sprite):
         self.rect.center = (x, y)
         self.dummy_coin = dummy_coin
 
+        # Thêm các thuộc tính cho hiệu ứng rơi
+        self.velocity_y = -8  # vận tốc lên
+        self.gravity = 0.5     # trọng lực
+        self.bounce_speed = 8  # tốc độ nảy
+        self.max_bounces = 2    # số lần nảy tối đa
+        self.bounce_count = 0   # Đếm số lần đã nảy
+        self.original_y = y     # Vị trí y ban đầu
+        self.is_falling = True  # Trạng thái đang rơi
+
     def update(self,screen_scroll,player,coin_fx,heal_fx):
+        # Hiệu ứng rơi và nảy
+        if not self.dummy_coin and self.bounce_count < self.max_bounces:
+            # Áp dụng trọng lực
+            self.velocity_y += self.gravity
+            self.rect.y += self.velocity_y
+            
+            # Kiểm tra nảy khi chạm đất
+            if self.rect.y >= self.original_y:
+                self.rect.y = self.original_y
+                if self.is_falling:  # Chỉ nảy khi đang rơi xuống
+                    self.velocity_y = -self.bounce_speed
+                    self.bounce_count += 1
+                    # Giảm tốc độ nảy sau mỗi lần
+                    self.bounce_speed *= 0.5
+                self.is_falling = False
+            else:
+                self.is_falling = True
+                
         # định vị lại vị trí của vật phẩm theo thanh cuộn
         if self.dummy_coin == False:
             self.rect.x += screen_scroll[0]
