@@ -20,7 +20,7 @@ pygame.display.set_caption("Dungeon Crawler")
 clock = pygame.time.Clock()
 
 # biến xác định level
-level = 15
+level = 1
 
 start_game = False
 pause_game = False
@@ -198,22 +198,28 @@ class ScreenFade():
         return fade_complete
 world_data =[]
 
-for row in range(constants.ROWS):
-    r = [-1] * constants.COLS
-    world_data.append(r)
+# for row in range(constants.ROWS):
+#     r = [-1] * constants.COLS
+#     world_data.append(r)
 
 # đọc file csv
 with open(f'levels/level{level}_data.csv',newline='') as csvfile:
     reader = csv.reader(csvfile,delimiter=',')
-    for x,row in enumerate(reader):
-        for y,tile in enumerate(row):
-            world_data[x][y] = int(tile) 
+    for row in reader:
+        world_data.append([int(tile) for tile in row])
+    # for x,row in enumerate(reader):
+    #     for y,tile in enumerate(row):
+    #         world_data[x][y] = int(tile) 
 
 world = World()
-world.process_data(world_data,tile_list,item_images,mob_animations)
+world.process_data(world_data,tile_list,item_images,mob_animations,level)
+
+# print(f"kakakakak  {world.map_tiles}")
 
 map_width = len(world_data[0])
 map_height = len(world_data)
+
+# print(map_width,map_height)
 
 # tạo nhân vật
 player = world.player
@@ -245,6 +251,100 @@ start_button = Button(constants.SCREEN_WIDTH//2 - 145,constants.SCREEN_HEIGHT//2
 exit_button = Button(constants.SCREEN_WIDTH//2 - 110,constants.SCREEN_HEIGHT//2 + 50,exit_img)
 restart_button = Button(constants.SCREEN_WIDTH//2 - 175,constants.SCREEN_HEIGHT//2 - 50,restart_img)
 resume_button = Button(constants.SCREEN_WIDTH//2 - 175,constants.SCREEN_HEIGHT//2 - 150,resume_img)
+
+def draw_minimap(screen, world_data, player, enemy_list, map_width, map_height):
+    # Tính chiều rộng và chiều cao của minimap dựa trên map_width và map_height
+    minimap_width = map_width * constants.MINIMAP_TILE_SIZE
+    minimap_height = map_height * constants.MINIMAP_TILE_SIZE
+    
+    # Vị trí Y để minimap nằm ở góc trái dưới, cách mép dưới 10 pixel
+    minimap_pos_y = constants.SCREEN_HEIGHT - 10 - minimap_height
+    
+    # Vẽ nền minimap (khung bao quanh)
+    pygame.draw.rect(screen, (0, 0, 0), (constants.MINIMAP_POS_X - 2, minimap_pos_y - 2, minimap_width + 4, minimap_height + 4))
+    
+    # Vẽ sàn (mặc định tất cả các ô là sàn)
+    for y in range(map_height):
+        for x in range(map_width):
+            tile_x = constants.MINIMAP_POS_X + (x * constants.MINIMAP_TILE_SIZE)
+            tile_y = minimap_pos_y + (y * constants.MINIMAP_TILE_SIZE)
+            pygame.draw.rect(screen, constants.MINIMAP_FLOOR_COLOR, (tile_x, tile_y, constants.MINIMAP_TILE_SIZE, constants.MINIMAP_TILE_SIZE))
+
+    # Vẽ tường (dựa trên world.obstacle_tiles)
+    for obstacle in world.obstacle_tiles:
+        # obstacle: [image, image_rect, image_x, image_y]
+        image_x, image_y = obstacle[2], obstacle[3]  # Lấy tọa độ pixel
+        grid_x = image_x // constants.TILE_SIZE  # Tính tọa độ lưới
+        grid_y = image_y // constants.TILE_SIZE
+        if 0 <= grid_x < map_width and 0 <= grid_y < map_height:
+            tile_x = constants.MINIMAP_POS_X + (grid_x * constants.MINIMAP_TILE_SIZE)
+            tile_y = minimap_pos_y + (grid_y * constants.MINIMAP_TILE_SIZE)
+            pygame.draw.rect(screen, constants.MINIMAP_WALL_COLOR, (tile_x, tile_y, constants.MINIMAP_TILE_SIZE, constants.MINIMAP_TILE_SIZE))
+
+    # Vẽ lối ra (dựa trên world.exit_tile)
+    if world.exit_tile:  # Kiểm tra xem exit_tile có tồn tại không
+        # world.exit_tile: [image, image_rect, image_x, image_y]
+        image_x, image_y = world.exit_tile[2], world.exit_tile[3]  # Lấy tọa độ pixel
+        grid_x = image_x // constants.TILE_SIZE  # Tính tọa độ lưới
+        grid_y = image_y // constants.TILE_SIZE
+        if 0 <= grid_x < map_width and 0 <= grid_y < map_height:
+            tile_x = constants.MINIMAP_POS_X + (grid_x * constants.MINIMAP_TILE_SIZE)
+            tile_y = minimap_pos_y + (grid_y * constants.MINIMAP_TILE_SIZE)
+            pygame.draw.rect(screen, constants.MINIMAP_EXIT_COLOR, (tile_x, tile_y, constants.MINIMAP_TILE_SIZE, constants.MINIMAP_TILE_SIZE))
+
+    # Vẽ người chơi
+    if player.alive:
+        player_pos = player.get_map_pos()  # Lấy vị trí lưới của người chơi
+        player_x = constants.MINIMAP_POS_X + (player_pos[0] * constants.MINIMAP_TILE_SIZE)
+        player_y = minimap_pos_y + (player_pos[1] * constants.MINIMAP_TILE_SIZE)
+        pygame.draw.rect(screen, constants.MINIMAP_PLAYER_COLOR, (player_x, player_y, constants.MINIMAP_TILE_SIZE, constants.MINIMAP_TILE_SIZE))
+
+    # Vẽ enemy
+    for enemy in enemy_list:
+        if enemy.alive:
+            enemy_pos = enemy.get_map_pos()  # Lấy vị trí lưới của enemy
+            enemy_x = constants.MINIMAP_POS_X + (enemy_pos[0] * constants.MINIMAP_TILE_SIZE)
+            enemy_y = minimap_pos_y + (enemy_pos[1] * constants.MINIMAP_TILE_SIZE)
+            pygame.draw.rect(screen, constants.MINIMAP_ENEMY_COLOR, (enemy_x, enemy_y, constants.MINIMAP_TILE_SIZE, constants.MINIMAP_TILE_SIZE))
+    # # Tính chiều rộng và chiều cao của minimap dựa trên map_width và map_height
+    # minimap_width = map_width * constants.MINIMAP_TILE_SIZE
+    # minimap_height = map_height * constants.MINIMAP_TILE_SIZE
+    
+    # # Vị trí Y để minimap nằm ở góc trái dưới, cách mép dưới 10 pixel
+    # minimap_pos_y = constants.SCREEN_HEIGHT - 10 - minimap_height
+    
+    # # Vẽ nền minimap (khung bao quanh)
+    # pygame.draw.rect(screen, (0, 0, 0), (constants.MINIMAP_POS_X - 2, minimap_pos_y - 2, minimap_width + 4, minimap_height + 4))
+    
+    # # Duyệt qua world_data để vẽ các ô
+    # for y in range(map_height):
+    #     for x in range(map_width):
+    #         tile = world_data[y][x]
+    #         tile_x = constants.MINIMAP_POS_X + (x * constants.MINIMAP_TILE_SIZE)
+    #         tile_y = minimap_pos_y + (y * constants.MINIMAP_TILE_SIZE)
+            
+    #         # Vẽ ô dựa trên loại tile
+    #         if tile == 0:  # Sàn
+    #             pygame.draw.rect(screen, constants.MINIMAP_FLOOR_COLOR, (tile_x, tile_y, constants.MINIMAP_TILE_SIZE, constants.MINIMAP_TILE_SIZE))
+    #         elif tile == 7:  # Tường
+    #             pygame.draw.rect(screen, constants.MINIMAP_WALL_COLOR, (tile_x, tile_y, constants.MINIMAP_TILE_SIZE, constants.MINIMAP_TILE_SIZE))
+    #         elif tile == 8:  # Lối ra
+    #             pygame.draw.rect(screen, constants.MINIMAP_EXIT_COLOR, (tile_x, tile_y, constants.MINIMAP_TILE_SIZE, constants.MINIMAP_TILE_SIZE))
+
+    # # Vẽ người chơi
+    # if player.alive:
+    #     player_pos = player.get_map_pos()  # Lấy vị trí của người chơi trên bản đồ (x, y)
+    #     player_x = constants.MINIMAP_POS_X + (player_pos[0] * constants.MINIMAP_TILE_SIZE)
+    #     player_y = minimap_pos_y + (player_pos[1] * constants.MINIMAP_TILE_SIZE)
+    #     pygame.draw.rect(screen, constants.MINIMAP_PLAYER_COLOR, (player_x, player_y, constants.MINIMAP_TILE_SIZE, constants.MINIMAP_TILE_SIZE))
+
+    # # Vẽ enemy
+    # for enemy in enemy_list:
+    #     if enemy.alive:
+    #         enemy_pos = enemy.get_map_pos()  # Lấy vị trí của enemy trên bản đồ (x, y)
+    #         enemy_x = constants.MINIMAP_POS_X + (enemy_pos[0] * constants.MINIMAP_TILE_SIZE)
+    #         enemy_y = minimap_pos_y + (enemy_pos[1] * constants.MINIMAP_TILE_SIZE)
+    #         pygame.draw.rect(screen, constants.MINIMAP_ENEMY_COLOR, (enemy_x, enemy_y, constants.MINIMAP_TILE_SIZE, constants.MINIMAP_TILE_SIZE))
 
 run = True
 while run:
@@ -294,7 +394,7 @@ while run:
                 for enemy in enemy_list:
                     if enemy.alive:
                         # fireball = enemy.ai(player,world.weighted_tile_grid,world.tile_grid,world.obstacle_tiles,screen_scroll,fireball_image,map_width, map_height)
-                        fireball = enemy.ai(player,world.weighted_tile_grid,world_data,world.obstacle_tiles,screen_scroll,fireball_image,map_width, map_height)
+                        fireball = enemy.ai(player,world.weighted_tile_grid,world_data,world.obstacle_tiles,screen_scroll,fireball_image,map_width , map_height,world)
                         if fireball:
                             fireball_group.add(fireball)
                     enemy.update(item_group, coin_images, red_potion)
@@ -326,8 +426,8 @@ while run:
             # vẽ quái vật
             for enemy in enemy_list:
                 enemy.draw(screen)
-            for enemy in enemy_list:
-                enemy.check_debug_input()
+            # for enemy in enemy_list:
+            #     enemy.check_debug_input()
 
             # vẽ vũ khí
             bow.draw(screen)
@@ -348,7 +448,8 @@ while run:
 
             # vẽ lại đề đè lên panel thông tin
             score_coin.draw(screen) # phải thêm phương thức draw vì nếu không thêm thì draw chỉ áp dụng cho Group
-            
+            draw_minimap(screen, world_data, player, enemy_list, map_width, map_height)
+
             if level_complete:
                 start_intro = True
                 level += 1
@@ -359,7 +460,7 @@ while run:
                         for y,tile in enumerate(row):
                             world_data[x][y] = int(tile) 
                 world = World()
-                world.process_data(world_data,tile_list,item_images,mob_animations)
+                world.process_data(world_data,tile_list,item_images,mob_animations,level)
                 # ghi đè lại các thông tin mới lên thông tin cũ
                 temp_hp = player.health
                 temp_score = player.score
@@ -391,7 +492,7 @@ while run:
                                 for y,tile in enumerate(row):
                                     world_data[x][y] = int(tile) 
                         world = World()
-                        world.process_data(world_data,tile_list,item_images,mob_animations)
+                        world.process_data(world_data,tile_list,item_images,mob_animations,level)
                         # ghi đè lại các thông tin mới lên thông tin cũ
                         temp_score = player.score
                         player = world.player
