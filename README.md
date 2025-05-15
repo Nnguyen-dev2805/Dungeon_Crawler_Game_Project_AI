@@ -6,7 +6,7 @@
 
 Dự án được phát triển dựa trên nền tảng Pygame, tập trung vào việc xây dựng một game **Dungeon Crawler** 2D với kẻ thù thông minh. Điểm nổi bật là hệ thống AI của kẻ thù, ứng dụng các thuật toán tìm kiếm và học máy để tạo ra hành vi thực tế, bao gồm tuần tra, tấn công, và chạy trốn.
 
-[DEMO](assets/demo.gif)
+![DEMO](assets/demo.gif)
 
 ---
 
