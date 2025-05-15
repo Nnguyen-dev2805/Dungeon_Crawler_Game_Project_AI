@@ -106,12 +106,12 @@ class Enemy:
         self.exploration_bonus = 10  # Thưởng khi khám phá vị trí mới
 
         # Vẽ hình tròn tấn công
-        self.radius = 200 #phạm vi tấn công 200 pixel
+        self.radius = 230 #phạm vi tấn công 200 pixel
         self.draw_detection_circle = True
         self.attack_algorithm = attack_algorithm
 
         self.flee_start_time = None
-        self.heal_cooldown = 2000  # 2 giây (2000ms)
+        self.heal_cooldown = 1000  # 2 giây (2000ms)
 
     def move(self, dx, dy, obstacle_tiles):
         self.running = False
@@ -189,7 +189,7 @@ class Enemy:
         )
         if dist < self.radius or self.ray_cast_player(player, obstacle_tiles):
             if dist < constants.ATTACK_RANGE and not player.hit:
-                player.health -= 10
+                player.health -= 0
                 player.hit = True
                 player.last_hit = pygame.time.get_ticks()
 
@@ -332,7 +332,7 @@ class Enemy:
                 self.direction = Direction.NONE
                 return 0, 0
 
-            self.step_count = 0  
+            self.step_count = 0 
 
         # thực hiện di chuyển theo hướng đã chọn
         if self.direction != Direction.NONE:
@@ -390,12 +390,9 @@ class Enemy:
 # ----------------------- HÀM XỬ LÝ VIỆC TUẦN TRA SỬ DỤNG Q-LEARNING -----------------------
 
     def calculate_state(self, player, obstacle_tiles, map_width, map_height):
-        # chưa fix PIXEL
         enemy_pos = self.get_map_pos()
         player_pos = (player.rect.centerx // constants.TILE_SIZE, player.rect.centery // constants.TILE_SIZE)
-        # enemy_pos = self.enemy_pos_csv
-        # player_pos = player.player_pos_csv
-        
+
         # Lưu trữ toàn bộ khoảng cách tương đối
         relative_x = player_pos[0] - enemy_pos[0]
         relative_y = player_pos[1] - enemy_pos[1]
@@ -414,7 +411,11 @@ class Enemy:
                          if (enemy_pos[0] + dx, enemy_pos[1] + dy) in self.wall_positions)
         
         # Thêm niềm tin từ search_belief_map vào trạng thái
-        belief_value = self.search_belief_map[enemy_pos[0]][enemy_pos[1]]
+        if 0 <= enemy_pos[0] < len(self.search_belief_map) and 0 <= enemy_pos[1] < len(self.search_belief_map[0]):
+            belief_value = self.search_belief_map[enemy_pos[0]][enemy_pos[1]]
+        else:
+            # Xử lý trường hợp vị trí ngoài phạm vi
+            belief_value = 0  # hoặc giá trị mặc định nào đó
         belief_category = 0 if belief_value < 2 else 1 if belief_value < 5 else 2  # Phân loại niềm tin
         
         return (relative_x, relative_y, player_visible, tuple(valid_directions), cover_count, belief_category)
@@ -450,10 +451,6 @@ class Enemy:
             reward -= repeat_penalty
         else:
             reward += self.exploration_bonus  # Thưởng khi khám phá vị trí mới
-
-        # Phạt nếu bị tấn công
-        if self.hit:
-            reward -= 50
 
         return reward
 
@@ -550,13 +547,13 @@ class Enemy:
         # Hồi máu sau 2 giây khi đang chạy trốn
         current_time = pygame.time.get_ticks()
         if current_time - self.flee_start_time >= self.heal_cooldown and self.health < self.max_health:
-            self.health = min(self.max_health, self.health + 10)
+            self.health = min(self.max_health, self.health + 15)
             print(f"Enemy healed to {self.health} while fleeing")
             self.flee_start_time = current_time  # Reset thời gian để hồi máu tiếp sau 2 giây nữa
 
         # Kiểm tra nếu đã đến vị trí nấp và hồi máu thêm nếu cần
         if enemy_pos == safe_spot and self.health < self.max_health:
-            self.health = min(self.max_health, self.health + 10)
+            self.health = min(self.max_health, self.health + 15)
             print(f"Enemy healed to {self.health} at {safe_spot}")
             self.flee_start_time = current_time  # Reset thời gian khi đến safe spot
 
@@ -643,7 +640,7 @@ class Enemy:
         player_pos = (player.rect.centerx // constants.TILE_SIZE, player.rect.centery // constants.TILE_SIZE)
         enemy_pos = self.enemy_pos_csv
         if check_see:
-            self.lost_player_timer = 0  # reset timer khi thấy người chơi
+            # self.lost_player_timer = 0  # reset timer khi thấy người chơi
             for x in range(self.map_width):
                     for y in range(self.map_height):
                         if (x, y) in self.wall_positions:
@@ -664,7 +661,7 @@ class Enemy:
                     # self.search_belief_map[x][y] = min(10.0, self.search_belief_map[x][y] + 5)
                     self.search_belief_map[x][y] +=5
         else:
-            self.lost_player_timer += 1  # tăng timer khi mất dấu người chơi
+            # self.lost_player_timer += 1  # tăng timer khi mất dấu người chơi
             fov_radius = 2
             for x in range(max(0, enemy_pos[0] - fov_radius), min(self.map_width, enemy_pos[0] + fov_radius)):
                 for y in range(max(0, enemy_pos[1] - fov_radius), min(self.map_height, enemy_pos[1] + fov_radius)):
@@ -675,14 +672,14 @@ class Enemy:
                     # if random.random() < 0.1:
                     #     self.search_belief_map[x][y] = min(3, self.search_belief_map[x][y], 0) + 1
             
-            if self.lost_player_timer > self.lost_player_timeout // 2:  # Sau 300 frame
-                for x in range(self.map_width):
-                    for y in range(self.map_height):
-                        if (x, y) not in self.wall_positions and (x, y) not in self.visited_positions:
+            # if self.lost_player_timer > self.lost_player_timeout // 2:  # Sau 300 frame
+            #     for x in range(self.map_width):
+            #         for y in range(self.map_height):
+            #             if (x, y) not in self.wall_positions and (x, y) not in self.visited_positions:
                             # self.search_belief_map[x][y] = max(0, self.search_belief_map[x][y], 0)
                         # if random.random() < 0.1:
                         #     self.search_belief_map[x][y] = min(3, self.search_belief_map[x][y], 0) + 1
-                            self.search_belief_map[x][y] = max(0.0, self.search_belief_map[x][y] + 0.01)  # Tăng nhẹ niềm tin ở vùng chưa đi
+                            # self.search_belief_map[x][y] = max(0.0, self.search_belief_map[x][y] + 0.01)  # Tăng nhẹ niềm tin ở vùng chưa đi
 
         # print("DEBUG: Belief Map:")
         # for i in range(self.map_width):
@@ -715,10 +712,9 @@ class Enemy:
                 # Đếm số ô tường liền kề làm góc nấp
                 # cover_count = sum(1 for dx, dy in [(0, 1), (1, 0), (0, -1), (-1, 0)] 
                 #                 if (x + dx, y + dy) in self.wall_positions)
-                # tính điểm: ưu tiên những điểm xa npc và có niềm tin cao
                 score= belief/max_belief * 0.95 - dist/max_distance*0.05
 
-                # score = (belief / max_belief * 0.95) - (dist / max_distance * 0.05) + (cover_count * 0.1)           
+                # score = (belief / max_belief * 0.95) - (dist / max_distance * 0.s05) + (cover_count * 0.1)           
                 if (x, y) in self.visited_positions:
                     score -= 0.5  # Phạt nếu đã đi qua
                 # if (x, y) in self.visited_positions:
@@ -826,12 +822,13 @@ class Enemy:
         self.update_search_belief_map(player, obstacle_tiles)
         fireball, dist = self.handle_attack(player, fireball_image,obstacle_tiles)
 
-        if self.ray_cast_player(player, obstacle_tiles):
+        if self.ray_cast_player(player, obstacle_tiles) or dist < self.radius:
             self.player_search_trigger = True
             behavior = self.decide_behavior(dist)
             if behavior == "attack":
                 self.state = CharacterState.ATTACKING if dist < constants.ATTACK_RANGE else CharacterState.MOVING
-                # Sử dụng A* để đuổi người chơi khi nhìn thấy
+                
+                # Sử dụng thuật toán để đuổi người chơi
                 ai_dx, ai_dy = self.handle_movement_attack(player, tile_grid, obstacle_tiles, map_width, map_height)
                 if ai_dx != 0 or ai_dy != 0:
                     self.move(ai_dx, ai_dy, obstacle_tiles)
@@ -843,10 +840,12 @@ class Enemy:
         else:
             self.player_search_trigger = False
             self.state = CharacterState.PATROLLING
-            self.decay_search_belief_map(obstacle_tiles)
+            # self.decay_search_belief_map(obstacle_tiles)
             if self.patrol_style == "belief":
+                self.decay_search_belief_map(obstacle_tiles)
                 ai_dx, ai_dy = self.handle_patrol_belief(player, tile_grid, obstacle_tiles, map_width, map_height, screen_scroll, world)
             elif self.patrol_style == "qlearning":
+                self.decay_search_belief_map(obstacle_tiles)
                 ai_dx, ai_dy = self.handle_patrol_qlearning(player, tile_grid, obstacle_tiles, map_width, map_height)
             if ai_dx != 0 or ai_dy != 0:
                 self.move(ai_dx, ai_dy, obstacle_tiles)
