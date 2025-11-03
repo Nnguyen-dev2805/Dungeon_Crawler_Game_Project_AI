@@ -1,18 +1,66 @@
-# DUNGEON CRAWLER: ỨNG DỤNG THUẬT TOÁN TÌM KIẾM VÀ AI CHO KẺ THÙ
+<div align="center">
 
-- HCMC University of Technology and Education  
-- **Môn**: Trí Tuệ Nhân Tạo  
-- **Giảng viên hướng dẫn**: TS. Phan Thị Huyền Trang  
+# DUNGEON CRAWLER AI
 
-Dự án được phát triển dựa trên nền tảng Pygame, tập trung vào việc xây dựng một game **Dungeon Crawler** 2D với kẻ thù thông minh. Điểm nổi bật là hệ thống AI của kẻ thù, ứng dụng các thuật toán tìm kiếm và học máy để tạo ra hành vi thực tế, bao gồm tuần tra, tấn công, và chạy trốn.
+### Hệ thống kẻ thù thông minh sử dụng thuật toán tìm kiếm và học máy
+
+[![Python](https://img.shields.io/badge/Python-3.x-blue.svg)](https://www.python.org/)
+[![Pygame](https://img.shields.io/badge/Pygame-2.x-green.svg)](https://www.pygame.org/)
+[![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
+</div>
+
+---
+
+## Thông tin đề tài
+
+- **Trường**: Đại học Sư phạm Kỹ thuật TP.HCM (HCMUTE)
+- **Môn học**: Trí tuệ nhân tạo
+- **Giảng viên hướng dẫn**: TS. Phan Thị Huyền Trang
+- **Sinh viên thực hiện**: 
+  - Trương Nhất Nguyên - 23110273
+  - Đặng Ngọc Tài - 23110304
+
+---
+
+## Mô tả dự án
+
+Dự án xây dựng game **Dungeon Crawler** 2D với Pygame, tập trung vào hệ thống AI kẻ thù thông minh sử dụng các thuật toán tìm kiếm và học máy. Kẻ thù có khả năng tuần tra, truy đuổi, tấn công và chạy trốn dựa trên các điều kiện động trong game. Hệ thống AI kết hợp nhiều thuật toán tìm đường (A*, BFS, Beam Search) với bản đồ niềm tin và học tăng cường (Q-Learning) để tạo ra lối chơi thử thách và thích ứng.
 
 ![DEMO](assets/demo.gif)
 
 ---
 
-## 🧠 Các thuật toán và cách hoạt động
+## Mục lục
 
-### 🌟 A* (A-star Search) – Tìm đường tối ưu
+- [Tính năng chính](#tính-năng-chính)
+- [Các thuật toán AI](#các-thuật-toán-ai)
+  - [A* Search](#a-a-star-search--tìm-đường-tối-ưu)
+  - [Belief Map](#belief-map--bản-đồ-niềm-tin)
+  - [Q-Learning](#q-learning--tự-học-hành-vi-tuần-tra)
+  - [Các thuật toán tìm kiếm khác](#các-thuật-toán-tìm-kiếm-khác-1)
+- [Cách game hoạt động](#cách-game-hoạt-động)
+- [Yêu cầu hệ thống](#yêu-cầu-hệ-thống)
+- [Hướng dẫn cài đặt](#hướng-dẫn-cài-đặt--chạy-game)
+
+---
+
+## Tính năng chính
+
+- **AI kẻ thù thông minh**: Sử dụng các thuật toán tìm đường tiên tiến (A*, BFS, Beam Search) để di chuyển trong dungeon
+- **Hệ thống niềm tin**: Kẻ thù dự đoán vị trí người chơi bằng belief map khi không nhìn thấy
+- **Học tăng cường**: Triển khai Q-Learning cho hành vi tuần tra thích ứng
+- **Chiến đấu động**: Hệ thống chiến đấu thời gian thực với quản lý máu và vật phẩm rơi
+- **Nhiều hành vi**: Kẻ thù có thể tuần tra, đuổi theo, tấn công và chạy trốn chiến lược khi máu thấp
+- **Thiết kế level bằng CSV**: Dễ dàng chỉnh sửa bố cục level
+- **Animation mượt mà**: Chuyển động và hoạt hình nhân vật trôi chảy
+- **Hệ thống âm thanh**: Nhạc nền và hiệu ứng âm thanh sống động
+
+---
+
+## Các thuật toán AI
+
+### A* (A-star Search) – Tìm đường tối ưu
 
 - **Mục tiêu:** Giúp kẻ thù di chuyển đến mục tiêu một cách nhanh chóng và hiệu quả.
 - **Cách hoạt động:**  
@@ -26,7 +74,7 @@ Dự án được phát triển dựa trên nền tảng Pygame, tập trung và
 
 ---
 
-### 🔍 Belief Map – Bản đồ niềm tin
+### Belief Map – Bản đồ niềm tin
 
 - **Mục tiêu:** Giúp kẻ thù dự đoán vị trí người chơi khi không còn nhìn thấy.
 - **Cách hoạt động:**  
@@ -38,7 +86,7 @@ Dự án được phát triển dựa trên nền tảng Pygame, tập trung và
 
 ---
 
-### ⛰️ Q-Learning – Tự học hành vi tuần tra
+### Q-Learning – Tự học hành vi tuần tra
 
 - **Mục tiêu:** Giúp kẻ thù học cách tuần tra hiệu quả qua trải nghiệm.
 - **Cách hoạt động:**  
@@ -59,7 +107,7 @@ Dự án được phát triển dựa trên nền tảng Pygame, tập trung và
 
 ---
 
-### 🛠️ Các thuật toán tìm kiếm khác
+### Các thuật toán tìm kiếm khác
 
 - **BFS (Breadth-First Search):**  
   Tìm đường ngắn nhất bằng cách duyệt theo chiều rộng.  
@@ -78,7 +126,7 @@ Dự án được phát triển dựa trên nền tảng Pygame, tập trung và
 
 ---
 
-## 🔥 Cách game hoạt động
+## Cách game hoạt động
 
 **Khởi tạo:**  
 - Bản đồ được tải từ file CSV, tạo thành lưới ô với các vị trí tường và ô trống.
@@ -105,23 +153,14 @@ Dự án được phát triển dựa trên nền tảng Pygame, tập trung và
 
 ---
 
-## 👨‍💻 Thành viên phát triển
-
-| Họ và tên        | Mã sinh viên  |
-|------------------|---------------|
-| Trương Nhất Nguyên | 23110273      |
-| Đặng Ngọc Tài  | 23110304      |
-
----
-
-## 🧰 Yêu cầu hệ thống
+## Yêu cầu hệ thống
 
 - Python 3.x  
 - Thư viện `pygame`
 
 ---
 
-## 🚀 Hướng dẫn cài đặt & chạy game
+## Hướng dẫn cài đặt & chạy game
 
 ### 1. Tải mã nguồn
 ```bash
@@ -135,3 +174,56 @@ pip install pygame
 ```bash
 python main.py
 ```
+
+---
+
+## Điều khiển game
+
+- **Phím mũi tên / WASD**: Di chuyển người chơi
+- **Chuột trái**: Tấn công
+- **ESC**: Tạm dừng game
+
+---
+
+## Công nghệ sử dụng
+
+- **Python 3.x**: Ngôn ngữ lập trình chính
+- **Pygame**: Framework phát triển game
+- **CSV**: Lưu trữ dữ liệu level
+- **NumPy**: Tính toán toán học cho thuật toán AI
+
+---
+
+## Cấu trúc dự án
+
+```
+Dungeon_Crawler_Game_Project_AI/
+├── main.py           # Vòng lặp game chính và khởi tạo
+├── player.py         # Class nhân vật người chơi
+├── enemy.py          # Logic AI và hành vi kẻ thù
+├── weapon.py         # Hệ thống vũ khí
+├── item.py           # Vật phẩm và đồ sưu tầm
+├── world.py          # Quản lý thế giới và level
+├── algorithms.py     # Thuật toán tìm đường AI
+├── qlearning.py      # Triển khai Q-Learning
+├── constants.py      # Hằng số và cấu hình game
+├── button.py         # Component nút UI
+├── assets/           # Tài nguyên game (sprites, audio, fonts)
+└── levels/           # Dữ liệu level (file CSV)
+```
+
+---
+
+## Liên hệ
+
+Nếu có câu hỏi hoặc phản hồi, vui lòng liên hệ:
+
+- **Trương Nhất Nguyên**: [GitHub](https://github.com/Nnguyen-dev2805)
+
+---
+
+<div align="center">
+
+**Được phát triển bởi Trương Nhất Nguyên & Đặng Ngọc Tài**
+
+</div>
